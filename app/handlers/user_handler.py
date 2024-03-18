@@ -54,6 +54,7 @@ async def set_group_cmd(msg: Message, state: FSMContext):
             await msg.answer(
                 "Хорошо, теперь ты будешь получать расписание этой группы.",
                 reply_markup=main_keyboard.main(f"{URL}{code}"))
+            db.execute("""UPDATE statistics SET added = added + 1""")
             break
         continue
     else:
@@ -150,7 +151,8 @@ async def get_new_schedule(bot: Bot):
                             try:
                                 await bot.send_message(int(chat_id[0]), f"На сайте обновили расписание:\n\n{message}")
                             except Exception as e:
-                                db.fetch("""DELETE FROM users WHERE chat_id = %s""", int(chat_id[0]))
+                                db.execute("""DELETE FROM users WHERE chat_id = %s""", int(chat_id[0]))
+                                db.execute("""UPDATE statistics SET delete = delete + 1""")
             else:
                 raise Exception(f"Сайт не дал ответ для группы {task.url}")
     except Exception as e:
@@ -188,6 +190,9 @@ async def get_schedule_cmd(msg: Message):
         """SELECT schedule FROM schedules WHERE class = %s""",
         user_class
     )[0][0]
+    if not class_schedule:
+        await msg.answer(f"Расписание пока недоступно!")
+        return
     await msg.answer(f"Расписание занятий на данный момент:\n\n{await schedule_converter(class_schedule)}")
 
 
