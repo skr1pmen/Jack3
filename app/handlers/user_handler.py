@@ -76,7 +76,7 @@ async def db_reset_cmd(msg: Message):
         await msg.answer("Ошибка❗\nТебе недоступна данная команда!", reply_markup=main_keyboard.main(URL+str(user_class)))
 
 
-@user_router.message()
+@user_router.message(Command('get_statistics'))
 async def get_statistics(bot: Bot):
     statistics = db.fetch("""SELECT * FROM statistics""")[0]
     await bot.send_message(ADMINS[0],
