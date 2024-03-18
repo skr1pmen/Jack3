@@ -9,10 +9,12 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 
 async def main():
-    bot = Bot(token=config.TOKEN, parse_mode=ParseMode.HTML)
+    bot = Bot(token=config.TOKEN_TEST, parse_mode=ParseMode.HTML)
     dp = Dispatcher()
     cron = AsyncIOScheduler(timezone='Europe/Moscow')
     cron.add_job(func=user.get_new_schedule, trigger='cron', minute="*/15", args=[bot])
+    # cron.add_job(func=user.get_statistics, trigger='cron', day_of_week="0", hour="0", minute="0", args=[bot])
+    cron.add_job(func=user.get_statistics, trigger='cron', minute="*", args=[bot])
 
     dp.include_routers(
         user.user_router,

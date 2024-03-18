@@ -76,6 +76,15 @@ async def db_reset_cmd(msg: Message):
         await msg.answer("Ошибка❗\nТебе недоступна данная команда!", reply_markup=main_keyboard.main(URL+str(user_class)))
 
 
+@user_router.message()
+async def get_statistics(bot: Bot):
+    statistics = db.fetch("""SELECT * FROM statistics""")[0]
+    await bot.send_message(ADMINS[0],
+                           f"Статистика за неделю:\n+{statistics[0]} пользователей🎉🎉🎉\n"
+                           f"Удалено пользователей: {statistics[1]}!")
+    db.execute("""UPDATE statistics SET added = 0, delete = 0""")
+
+
 @user_router.message(Command('update_schedule'))
 async def get_new_schedule(bot: Bot):
     # Overwriting the old schedule for future comparison with the new one
