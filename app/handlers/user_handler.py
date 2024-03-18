@@ -31,6 +31,7 @@ async def start_cmd(msg: Message, state: FSMContext):
         await state.set_state(Group.group)
         await msg.answer_sticker(sticker_hi)
         await msg.answer(welcome_message)
+        db.execute("""UPDATE statistics SET added = added + 1""")
     else:
         code = db.fetch("""SELECT class FROM users WHERE chat_id = %s""", msg.chat.id)[0][0]
         await msg.answer(f"Привет, {msg.from_user.first_name}! Ты уже зарегистрирован у меня. "
@@ -54,7 +55,6 @@ async def set_group_cmd(msg: Message, state: FSMContext):
             await msg.answer(
                 "Хорошо, теперь ты будешь получать расписание этой группы.",
                 reply_markup=main_keyboard.main(f"{URL}{code}"))
-            db.execute("""UPDATE statistics SET added = added + 1""")
             break
         continue
     else:
