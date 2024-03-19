@@ -35,7 +35,7 @@ async def start_cmd(msg: Message, state: FSMContext):
     else:
         code = db.fetch("""SELECT class FROM users WHERE chat_id = %s""", msg.chat.id)[0][0]
         await msg.answer(f"Привет, {msg.from_user.first_name}! Ты уже зарегистрирован у меня. "
-                         f"Повторно вводить команду не нужно!", reply_markup=main_keyboard.main(URL+str(code)))
+                         f"Повторно вводить команду не нужно!", reply_markup=main_keyboard.main(URL + str(code)))
 
 
 @user_router.message(Group.group)
@@ -71,9 +71,11 @@ async def db_reset_cmd(msg: Message):
         [db.execute(
             """INSERT INTO schedules (class) VALUES (%s)""", code)
             for _, code in group_list.items()]
-        await msg.answer("Успешно❕\nБаза расписания была сброшена!", reply_markup=main_keyboard.main(URL+str(user_class)))
+        await msg.answer("Успешно❕\nБаза расписания была сброшена!",
+                         reply_markup=main_keyboard.main(URL + str(user_class)))
     else:
-        await msg.answer("Ошибка❗\nТебе недоступна данная команда!", reply_markup=main_keyboard.main(URL+str(user_class)))
+        await msg.answer("Ошибка❗\nТебе недоступна данная команда!",
+                         reply_markup=main_keyboard.main(URL + str(user_class)))
 
 
 @user_router.message(Command('get_statistics'))
@@ -195,14 +197,17 @@ async def schedule_converter(schedule):
 @user_router.message(F.text.lower() == "расписание 📅")
 async def get_schedule_cmd(msg: Message):
     user_class = db.fetch("""SELECT class FROM users WHERE chat_id = %s""", msg.chat.id)[0][0]
-    class_schedule = db.fetch(
-        """SELECT schedule FROM schedules WHERE class = %s""",
-        user_class
-    )[0][0]
-    if not class_schedule:
-        await msg.answer(f"Расписание пока недоступно!")
-        return
-    await msg.answer(f"Расписание занятий на данный момент:\n\n{await schedule_converter(class_schedule)}")
+    try:
+        class_schedule = db.fetch(
+            """SELECT schedule FROM schedules WHERE class = %s""",
+            user_class
+        )[0][0]
+        if not class_schedule:
+            await msg.answer(f"Расписание пока недоступно!")
+            return
+        await msg.answer(f"Расписание занятий на данный момент:\n\n{await schedule_converter(class_schedule)}")
+    except Exception as e:
+        print(e, f"\n{user_class}")
 
 
 @user_router.message(F.text.lower() == "звонки 🔔")
@@ -240,7 +245,7 @@ async def get_settings_cmd(msg: Message):
 @user_router.message(F.text.lower() == "назад ◀")
 async def back_cmd(msg: Message):
     user_class = db.fetch("""SELECT class FROM users WHERE chat_id = %s""", msg.chat.id)[0][0]
-    await msg.answer("Возвращаю в меню", reply_markup=main_keyboard.main(URL+str(user_class)))
+    await msg.answer("Возвращаю в меню", reply_markup=main_keyboard.main(URL + str(user_class)))
 
 
 @user_router.message(F.text.lower() == "изменить группу 📔")
@@ -255,7 +260,7 @@ async def edit_group_cmd(msg: Message, state: FSMContext):
 async def switching_mailing_cmd(msg: Message):
     db.execute("""UPDATE bot_settings SET mailing = not mailing""")
     user_class = db.fetch("""SELECT class FROM users WHERE chat_id = %s""", msg.chat.id)[0][0]
-    await msg.answer("Успешно❕\nНастройки были изменены.", reply_markup=main_keyboard.main(URL+str(user_class)))
+    await msg.answer("Успешно❕\nНастройки были изменены.", reply_markup=main_keyboard.main(URL + str(user_class)))
 
 
 @user_router.message(F.text.lower() == "рассылка сообщения 💬")
@@ -264,7 +269,7 @@ async def message_distribution_cmd(msg: Message, state: FSMContext):
     if msg.chat.id in ADMINS:
         await state.set_state(message_text.message)
         await msg.answer("Введите сообщения для рассылки.\n<i>Шаблоны:\n{name} - имя пользователя\n"
-                     "{my} - @skr1pmen\n{bot} - Ссылка на бота</i>",
+                         "{my} - @skr1pmen\n{bot} - Ссылка на бота</i>",
                          reply_markup=main_keyboard.main(URL + str(user_class)))
     else:
         await msg.answer("Ошибка❗\nТебе недоступна данная команда!",
@@ -279,13 +284,14 @@ async def set_message_cmd(msg: Message, state: FSMContext, bot: Bot):
     await msg.answer("Успешно❕\nСообщение начинает рассылаться.")
     data = data["message"]
     all_users = db.fetch("""SELECT chat_id, name FROM users""")
-    for user in all_users: # user[0] -> id, user[1] -> user name
+    for user in all_users:  # user[0] -> id, user[1] -> user name
         try:
             if user[0] == msg.chat.id:
                 continue
             await bot.send_message(
                 user[0],
-                data.replace("{name}", user[1]).replace("{my}", "@skr1pmen").replace("{bot}", hlink("Jack", "https://t.me/srmk_bot?start=1"))
+                data.replace("{name}", user[1]).replace("{my}", "@skr1pmen").replace("{bot}", hlink("Jack",
+                                                                                                    "https://t.me/srmk_bot?start=1"))
             )
         except Exception as e:
             db.execute("""DELETE FROM users WHERE chat_id = %s""", user[0])
