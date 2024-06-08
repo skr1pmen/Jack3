@@ -12,7 +12,7 @@ from app.config import DATABASE, URL, SCHEDULE, USERAGENT, ADMINS
 from app.utils.group import Group
 from app.utils.message import Message as message_text
 from app.groups import group as group_list
-from app.keyboards import main_keyboard, settings_keyboard
+from app.keyboards import main_keyboard, settings_keyboard, not_group_keyboard
 from aiogram.utils.markdown import hlink
 
 user_router = Router()
@@ -30,13 +30,31 @@ async def start_cmd(msg: Message, state: FSMContext):
 
         await state.set_state(Group.group)
         await msg.answer_sticker(sticker_hi)
-        await msg.answer(welcome_message)
-        db.execute("""UPDATE statistics SET added = added + 1""")
+        await msg.answer(welcome_message, reply_markup=not_group_keyboard.main())
     else:
         code = db.fetch("""SELECT class FROM users WHERE chat_id = %s""", msg.chat.id)[0][0]
         await msg.answer(f"Привет, {msg.from_user.first_name}! Ты уже зарегистрирован у меня. "
                          f"Повторно вводить команду не нужно!", reply_markup=main_keyboard.main(URL + str(code)))
 
+
+@user_router.message(F.text.lower() == "я пока не студент колледжа 🎓")
+async def get_schedule_cmd(msg: Message):
+    await msg.answer(
+        "К сожалению я не могу помочь тебе ничем кроме как дать контакты колледжа. Я надеюсь это тебе поможет 👍\n\n"
+        "<b>Информация о месте нахождения образовательной организации:</b>\n"
+        "юридический адрес: 355044, Ставропольский край, г. Ставрополь, пр. Юности, д. 3\n"
+        "фактический адрес: 355044, Ставропольский край, г. Ставрополь, пр. Юности, д. 3\n\n"
+        "<b>Информация о режиме и графике работы образовательной организации:</b>\n"
+        "<b>Режим проведения учебных занятий:</b> В соответствии с расписанием учебных занятий в период с 8.00 до 20.00\n\n"
+        "<b>График работы структурных подразделений ГБПОУ СРМК:</b>\n"
+        "<b>Общий</b>: понедельник – пятница с 8.00 до 17.00; перерыв с 12.00 до 13.00\n"
+        "<b>Читальный зал</b>: понедельник - пятница с 8.00 до 17.00\n"
+        "<b>Абонементы библиотеки</b>: понедельник-пятница с 8.00 до 17.00\n\n"
+        "<b>Информация о контактных телефонах образовательной организации:</b>\n"
+        "Контактный телефон и факс: 8-(8652)-39-21-10\n\n"
+        "<b>Информация об адресах электронной почты образовательной организации:</b>\n"
+        "Адрес электронной почты образовательной организации: srmk@mosk.stavregion.ru"
+    )
 
 @user_router.message(Group.group)
 async def set_group_cmd(msg: Message, state: FSMContext):
@@ -50,6 +68,7 @@ async def set_group_cmd(msg: Message, state: FSMContext):
                     """INSERT INTO users (name, surname, username, class, chat_id) VALUES (%s, %s, %s, %s, %s)""",
                     msg.from_user.first_name, msg.from_user.last_name, msg.from_user.username, code, msg.chat.id
                 )
+                db.execute("""UPDATE statistics SET added = added + 1""")
             else:
                 db.execute("""UPDATE users SET class = %s WHERE chat_id = %s""", code, msg.chat.id)
             await msg.answer(
