@@ -1,5 +1,6 @@
 import asyncio
 from sched import scheduler
+from aiogram.client.default import DefaultBotProperties
 
 from app import config
 from aiogram import Bot, Dispatcher
@@ -9,7 +10,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 
 async def main():
-    bot = Bot(token=config.TOKEN, parse_mode=ParseMode.HTML)
+    bot = Bot(token=config.TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     # bot = Bot(token=config.TOKEN_TEST, parse_mode=ParseMode.HTML)
     dp = Dispatcher()
     cron = AsyncIOScheduler(timezone='Europe/Moscow')
