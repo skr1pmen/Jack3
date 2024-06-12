@@ -21,6 +21,7 @@ async def main():
     )
 
     cron.start()
+    await bot.delete_webhook()
     await dp.start_polling(bot)
 
 
