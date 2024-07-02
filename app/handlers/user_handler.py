@@ -108,6 +108,8 @@ async def get_statistics(bot: Bot):
 
 @user_router.message(Command('update_schedule'))
 async def get_new_schedule(bot: Bot):
+    if not db.fetch("""SELECT mailing FROM bot_settings""")[0][0]:
+        return
     # Overwriting the old schedule for future comparison with the new one
     old_schedule = [db.fetch(
         """SELECT schedule FROM schedules WHERE class = %s""", code)[0][0]
