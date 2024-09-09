@@ -2,8 +2,6 @@ import asyncio
 import json
 import re
 import aiohttp
-import certifi
-import ssl
 from aiogram import Router, F, Bot
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
@@ -118,7 +116,7 @@ async def get_new_schedule(bot: Bot):
                     for _, code in group_list.items()]
 
     # Obtaining new data from the college website
-    aiohttp_client = aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=ssl.create_default_context(cafile=certifi.where())))
+    aiohttp_client = aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=False))
     try:
         tasks = [aiohttp_client.get(f"{URL}{code}", headers=USERAGENT) for name, code in group_list.items()]
         tasks_finish = await asyncio.gather(*tasks)
