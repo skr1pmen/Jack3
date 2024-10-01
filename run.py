@@ -6,11 +6,12 @@ from aiogram import Bot, Dispatcher
 from aiogram.enums import ParseMode
 from app.handlers import user_handler as user
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from aiogram.client.bot import DefaultBotProperties
 
 
 async def main():
-    bot = Bot(token=config.TOKEN, parse_mode=ParseMode.HTML)
-    # bot = Bot(token=config.TOKEN_TEST, parse_mode=ParseMode.HTML)
+    bot = Bot(token=config.TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+    # bot = Bot(token=config.TOKEN_TEST, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     dp = Dispatcher()
     cron = AsyncIOScheduler(timezone='Europe/Moscow')
     cron.add_job(func=user.get_new_schedule, trigger='cron', minute="*/15", args=[bot])

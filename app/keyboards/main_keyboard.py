@@ -17,6 +17,10 @@ def main(url):
                 KeyboardButton(text="Помощь 📞"),
             ],
             [
+                KeyboardButton(text="Поддержать проект 🍃",
+                               web_app=WebAppInfo(url='https://www.donationalerts.com/r/skr1pmen'))
+            ],
+            [
                 KeyboardButton(text="Настройки ⚙"),
             ],
         ],
