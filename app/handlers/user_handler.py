@@ -183,7 +183,10 @@ async def get_new_schedule(bot: Bot):
                             schedule = json.loads(schedule_json)
                             message = await schedule_converter(schedule)
                             try:
-                                await bot.send_message(int(chat_id[0]), f"На сайте обновили расписание:\n\n{message}")
+                                await bot.send_message(
+                                    int(chat_id[0]),
+                                    f"На сайте обновили расписание:\n\n{message}",
+                                    reply_markup=main_keyboard.main(URL + str(codes[task_item])))
                             except Exception as e:
                                 db.execute("""DELETE FROM users WHERE chat_id = %s""", int(chat_id[0]))
                                 db.execute("""UPDATE statistics SET delete = delete + 1""")
