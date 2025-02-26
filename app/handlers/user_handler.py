@@ -18,6 +18,7 @@ from aiogram.utils.markdown import hlink
 user_router = Router()
 db = Database(DATABASE['HOST'], DATABASE['USERNAME'], DATABASE['PASSWORD'], DATABASE['BASENAME'])
 
+db.execute("""insert into logs (type, message) values ('info', 'Bot started')""")
 
 @user_router.message(CommandStart())
 async def start_cmd(msg: Message, state: FSMContext):
@@ -33,10 +34,12 @@ async def start_cmd(msg: Message, state: FSMContext):
         await state.set_state(Group.group)
         await msg.answer_sticker(sticker_hi)
         await msg.answer(welcome_message, reply_markup=not_group_keyboard.main())
+        db.execute(f"""insert into logs (type, message) values ('info', 'The user with id {msg.from_user.id} has joined the bot')""")
     else:
         code = db.fetch("""SELECT class FROM users WHERE chat_id = %s""", msg.chat.id)[0][0]
         await msg.answer(f"Привет, {msg.from_user.first_name}! Ты уже зарегистрирован у меня. "
                          f"Повторно вводить команду не нужно!", reply_markup=main_keyboard.main(URL + str(code)))
+        db.execute(f"""insert into logs (type, message) values ('info', 'User with id {msg.chat.id} tried to re-register')""")
 
 
 @user_router.message(F.text.lower() == "я пока не студент колледжа 🎓")
@@ -71,8 +74,12 @@ async def set_group_cmd(msg: Message, state: FSMContext):
                     msg.from_user.first_name, msg.from_user.last_name, msg.from_user.username, code, msg.chat.id
                 )
                 db.execute("""UPDATE statistics SET added = added + 1""")
+                db.execute(
+                    f"""insert into logs (type, message) values ('info', 'The user with id {msg.from_user.id} has completed registration and is now receiving a schedule')""")
             else:
                 db.execute("""UPDATE users SET class = %s WHERE chat_id = %s""", code, msg.chat.id)
+                db.execute(
+                    f"""insert into logs (type, message) values ('info', 'The user with id {msg.from_user.id} has changed his group')""")
             await msg.answer(
                 "Хорошо, теперь ты будешь получать расписание этой группы.",
                 reply_markup=main_keyboard.main(f"{URL}{code}"))
@@ -94,9 +101,11 @@ async def db_reset_cmd(msg: Message):
             for _, code in group_list.items()]
         await msg.answer("Успешно❕\nБаза расписания была сброшена!",
                          reply_markup=main_keyboard.main(URL + str(user_class)))
+        db.execute(f"""insert into logs (type, message) values ('info', 'All band schedules have been reset')""")
     else:
         await msg.answer("Ошибка❗\nТебе недоступна данная команда!",
                          reply_markup=main_keyboard.main(URL + str(user_class)))
+        db.execute(f"""insert into logs (type, message) values ('warning', 'User {msg.chat.id} attempted to reset the group schedule')""")
 
 
 @user_router.message(Command('get_statistics'))
@@ -106,6 +115,7 @@ async def get_statistics(bot: Bot):
                            f"Статистика за неделю:\n+{statistics[0]} пользователей🎉🎉🎉\n"
                            f"Удалено пользователей: {statistics[1]}!")
     db.execute("""UPDATE statistics SET added = 0, delete = 0""")
+    db.execute(f"""insert into logs (type, message) values ('info', 'The statistics for the week have been updated')""")
 
 
 @user_router.message(Command('update_schedule'))
@@ -190,10 +200,13 @@ async def get_new_schedule(bot: Bot):
                             except Exception as e:
                                 db.execute("""DELETE FROM users WHERE chat_id = %s""", int(chat_id[0]))
                                 db.execute("""UPDATE statistics SET delete = delete + 1""")
+                                db.execute(f"""insert into logs (type, message) values ('error', '{e}')""")
             else:
+                db.execute(f"""insert into logs (type, message) values ('error', 'The site did not provide a response for the {task.url} group')""")
                 raise Exception(f"Сайт не дал ответ для группы {task.url}")
     except Exception as e:
         print(e)
+        db.execute(f"""insert into logs (type, message) values ('error', '{e}')""")
     finally:
         await aiohttp_client.close()
 
@@ -287,6 +300,7 @@ async def switching_mailing_cmd(msg: Message):
     db.execute("""UPDATE bot_settings SET mailing = not mailing""")
     user_class = db.fetch("""SELECT class FROM users WHERE chat_id = %s""", msg.chat.id)[0][0]
     await msg.answer("Успешно❕\nНастройки были изменены.", reply_markup=main_keyboard.main(URL + str(user_class)))
+    db.execute(f"""insert into logs (type, message) values ('info', 'Schedule notifications disabled/enabled')""")
 
 
 @user_router.message(F.text.lower() == "рассылка сообщения 💬")
@@ -300,6 +314,7 @@ async def message_distribution_cmd(msg: Message, state: FSMContext):
     else:
         await msg.answer("Ошибка❗\nТебе недоступна данная команда!",
                          reply_markup=main_keyboard.main(URL + str(user_class)))
+        db.execute(f"""insert into logs (type, message) values ('error', 'User {msg.chat.id} attempted to do a mailing')""")
 
 
 @user_router.message(message_text.message)
@@ -319,8 +334,10 @@ async def set_message_cmd(msg: Message, state: FSMContext, bot: Bot):
                 data.replace("{name}", user[1]).replace("{my}", "@skr1pmen").replace("{bot}", hlink("Jack",
                                                                                                     "https://t.me/srmk_bot?start=1"))
             )
+            db.execute(f"""insert into logs (type, message) values ('info', 'User {msg.chat.id} made a distribution')""")
         except Exception as e:
             db.execute("""DELETE FROM users WHERE chat_id = %s""", user[0])
+            db.execute(f"""insert into logs (type, message) values ('error', '{e}')""")
 
 
 @user_router.message()
