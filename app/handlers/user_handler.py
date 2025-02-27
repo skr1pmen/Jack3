@@ -14,6 +14,7 @@ from app.utils.message import Message as message_text
 from app.groups import group as group_list
 from app.keyboards import main_keyboard, settings_keyboard, not_group_keyboard
 from aiogram.utils.markdown import hlink
+from datetime import datetime
 
 user_router = Router()
 db = Database(DATABASE['HOST'], DATABASE['USERNAME'], DATABASE['PASSWORD'], DATABASE['BASENAME'])
@@ -115,6 +116,13 @@ async def get_statistics(bot: Bot):
                            f"Статистика за неделю:\n+{statistics[0]} пользователей🎉🎉🎉\n"
                            f"Удалено пользователей: {statistics[1]}!")
     db.execute("""UPDATE statistics SET added = 0, delete = 0""")
+    db.execute(
+        """INSERT INTO statistics_history (week, year, added, deleted) VALUES (%s, %s, %s, %s)""",
+        datetime.now().isocalendar().week,
+        datetime.now().isocalendar().year,
+        statistics[0],
+        statistics[1]
+    )
     db.execute(f"""insert into logs (type, message) values ('info', 'The statistics for the week have been updated')""")
 
 
