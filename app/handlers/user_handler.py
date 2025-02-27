@@ -339,6 +339,22 @@ async def set_message_cmd(msg: Message, state: FSMContext, bot: Bot):
             db.execute("""DELETE FROM users WHERE chat_id = %s""", user[0])
             db.execute(f"""insert into logs (type, message) values ('error', '{e}')""")
 
+@user_router.message(Command('update_users_data'))
+async def update_users_data(msg: Message, bot: Bot):
+    if msg.chat.id in ADMINS:
+        users = db.fetch("""SELECT * FROM users ORDER BY id""")
+        await msg.answer('Начало обновления')
+        db.execute(f"""insert into logs (type, message) values ('warning', 'Start global update user data')""")
+        for user in users:
+            data = await bot.get_chat(user[1])
+            db.execute("""UPDATE users SET name = %s, surname = %s, username = %s WHERE chat_id = %s""", data.first_name, data.last_name, data.username, user[1])
+            print(data.id)
+        await msg.answer("Конец обновления!")
+    else:
+        await msg.answer("Ошибка❗\nТебе недоступна данная команда!")
+        db.execute(
+            f"""insert into logs (type, message) values ('warning', 'User {msg.chat.id} attempted to update the data of all users')"""
+
 
 @user_router.message()
 async def user_cmd(msg: Message):
