@@ -118,7 +118,7 @@ async def get_statistics(bot: Bot):
     db.execute("""UPDATE statistics SET added = 0, delete = 0""")
     db.execute(
         """INSERT INTO statistics_history (week, year, added, deleted) VALUES (%s, %s, %s, %s)""",
-        datetime.now().isocalendar().week,
+        datetime.now().isocalendar().week - 1,
         datetime.now().isocalendar().year,
         statistics[0],
         statistics[1]
