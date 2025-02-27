@@ -353,7 +353,7 @@ async def update_users_data(msg: Message, bot: Bot):
     else:
         await msg.answer("Ошибка❗\nТебе недоступна данная команда!")
         db.execute(
-            f"""insert into logs (type, message) values ('warning', 'User {msg.chat.id} attempted to update the data of all users')"""
+            f"""insert into logs (type, message) values ('warning', 'User {msg.chat.id} attempted to update the data of all users')""")
 
 
 @user_router.message()
