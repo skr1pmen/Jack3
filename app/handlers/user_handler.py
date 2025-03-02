@@ -406,6 +406,12 @@ async def set_message_cmd(msg: Message, state: FSMContext, bot: Bot):
             "Спасибо за твою идею! Мы её рассмотрим.",
             reply_markup=main_keyboard.main(URL + str(user_class))
         )
+        if msg.chat.id in ADMINS:
+            for admin in ADMINS:
+                await bot.send_message(
+                    admin,
+                    f"Пользователь {msg.chat.id} предложил идею {idea_id[0][0]}.\n{text['message']}",
+                )
 
 
 @user_router.message()
