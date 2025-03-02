@@ -1,15 +1,19 @@
 from aiogram.types import (
     ReplyKeyboardMarkup,
-    KeyboardButton
+    KeyboardButton,
+    WebAppInfo
 )
 
 
-def settings(mailing: bool = True):
+def settings(url: str, mailing: bool = True):
     if mailing:
         return ReplyKeyboardMarkup(
             keyboard=[
                 [
                     KeyboardButton(text="Изменить группу 📔")
+                ],
+                [
+                    KeyboardButton(text="Админ панель 🔨", web_app=WebAppInfo(url=url))
                 ],
                 [
                     KeyboardButton(text="Отключить рассылку 📮")
@@ -34,6 +38,9 @@ def settings(mailing: bool = True):
             keyboard=[
                 [
                     KeyboardButton(text="Изменить группу 📔")
+                ],
+                [
+                    KeyboardButton(text="Админ панель 🔨", web_app=WebAppInfo(url=url))
                 ],
                 [
                     KeyboardButton(text="Включить рассылку 📮")

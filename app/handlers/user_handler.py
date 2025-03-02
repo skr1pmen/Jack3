@@ -280,10 +280,12 @@ async def get_settings_cmd(msg: Message):
     if msg.chat.id in ADMINS:
         if db.fetch("""SELECT mailing FROM bot_settings""")[0][0]:
             await msg.answer(f"Доступные настройки:",
-                             reply_markup=settings_keyboard.settings())
+                             reply_markup=settings_keyboard.settings(
+                                 url=f"https://jack.skr1pmen.ru/login?id={msg.chat.id}"))
         else:
             await msg.answer(f"Доступные настройки:",
-                             reply_markup=settings_keyboard.settings(False))
+                             reply_markup=settings_keyboard.settings(
+                                 mailing=False, url=f"https://jack.skr1pmen.ru/login?id={msg.chat.id}"))
     else:
         await msg.answer(f"Доступные настройки:",
                          reply_markup=settings_keyboard.user_settings())
