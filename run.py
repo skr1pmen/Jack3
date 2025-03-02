@@ -19,9 +19,8 @@ async def main():
     # bot = Bot(token=config.TOKEN_TEST, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     dp = Dispatcher()
     cron = AsyncIOScheduler(timezone='Europe/Moscow')
-    if "--test-start" not in sys.argv:
-        cron.add_job(func=user.get_new_schedule, trigger='cron', minute="*/15", args=[bot])
-        cron.add_job(func=user.get_statistics, trigger='cron', day_of_week="0", hour="0", minute="0", args=[bot])
+    cron.add_job(func=user.get_new_schedule, trigger='cron', minute="*/15", args=[bot])
+    cron.add_job(func=user.get_statistics, trigger='cron', day_of_week="0", hour="0", minute="0", args=[bot])
 
     dp.include_routers(
         user.user_router,

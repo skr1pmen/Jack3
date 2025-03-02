@@ -114,9 +114,6 @@ async def db_reset_cmd(msg: Message):
 @user_router.message(Command('get_statistics'))
 async def get_statistics(bot: Bot):
     statistics = db.fetch("""SELECT * FROM statistics""")[0]
-    await bot.send_message(ADMINS[0],
-                           f"Статистика за неделю:\n+{statistics[0]} пользователей🎉🎉🎉\n"
-                           f"Удалено пользователей: {statistics[1]}!")
     db.execute("""UPDATE statistics SET added = 0, delete = 0""")
     db.execute(
         """INSERT INTO statistics_history (week, year, added, deleted) VALUES (%s, %s, %s, %s)""",
@@ -126,6 +123,9 @@ async def get_statistics(bot: Bot):
         statistics[1]
     )
     db.execute(f"""insert into logs (type, message) values ('info', 'The statistics for the week have been updated')""")
+    await bot.send_message(ADMINS[0],
+                           f"Статистика за неделю:\n+{statistics[0]} пользователей🎉🎉🎉\n"
+                           f"Удалено пользователей: {statistics[1]}!")
 
 
 @user_router.message(Command('update_schedule'))
@@ -406,12 +406,6 @@ async def set_message_cmd(msg: Message, state: FSMContext, bot: Bot):
             "Спасибо за твою идею! Мы её рассмотрим.",
             reply_markup=main_keyboard.main(URL + str(user_class))
         )
-        if msg.chat.id in ADMINS:
-            for admin in ADMINS:
-                await bot.send_message(
-                    admin,
-                    f"Пользователь {msg.chat.id} предложил идею {idea_id[0][0]}.\n{text['message']}",
-                )
 
 
 @user_router.message()
