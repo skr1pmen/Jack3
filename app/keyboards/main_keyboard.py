@@ -21,11 +21,23 @@ def main(url):
                                web_app=WebAppInfo(url='https://www.donationalerts.com/r/skr1pmen'))
             ],
             [
+                KeyboardButton(text="Предложить идею ✉")
+            ],
+            [
                 KeyboardButton(text="Настройки ⚙"),
             ],
         ],
         resize_keyboard=True,
         one_time_keyboard=True,
+        input_field_placeholder="Выберите пункт...",
+        selective=True
+    )
+
+
+def suggestion_idea_kb():
+    return ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text="Отменить ввод")]],
+        resize_keyboard=True,
         input_field_placeholder="Выберите пункт...",
         selective=True
     )

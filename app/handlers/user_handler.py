@@ -2,6 +2,7 @@ import asyncio
 import json
 import re
 import aiohttp
+import sys
 from aiogram import Router, F, Bot
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
@@ -10,6 +11,7 @@ from bs4 import BeautifulSoup
 from app.database.base_model import Database
 from app.config import DATABASE, URL, SCHEDULE, USERAGENT, ADMINS
 from app.utils.group import Group
+from app.utils.suggestion import Suggestion
 from app.utils.message import Message as message_text
 from app.groups import group as group_list
 from app.keyboards import main_keyboard, settings_keyboard, not_group_keyboard
@@ -19,7 +21,7 @@ from datetime import datetime
 user_router = Router()
 db = Database(DATABASE['HOST'], DATABASE['USERNAME'], DATABASE['PASSWORD'], DATABASE['BASENAME'])
 
-db.execute("""insert into logs (type, message) values ('info', 'Bot started')""")
+db.execute("""insert into logs (type, message) values ('info', %s)""", "Bot started (tested)" if '--test-start' in sys.argv else "Bot started")
 
 @user_router.message(CommandStart())
 async def start_cmd(msg: Message, state: FSMContext):
@@ -334,20 +336,23 @@ async def set_message_cmd(msg: Message, state: FSMContext, bot: Bot):
     await state.clear()
     await msg.answer("Успешно❕\nСообщение начинает рассылаться.")
     data = data["message"]
-    all_users = db.fetch("""SELECT chat_id, name FROM users""")
+    all_users = db.fetch("""SELECT chat_id, name, class FROM users""")
     for user in all_users:  # user[0] -> id, user[1] -> user name
         try:
             if user[0] == msg.chat.id:
                 continue
             await bot.send_message(
                 user[0],
-                data.replace("{name}", user[1]).replace("{my}", "@skr1pmen").replace("{bot}", hlink("Jack",
-                                                                                                    "https://t.me/srmk_bot?start=1"))
+                data.replace("{name}", user[1])
+                .replace("{my}", "@skr1pmen")
+                .replace("{bot}", hlink("Jack","https://t.me/srmk_bot?start=1")),
+                reply_markup=main_keyboard.main(URL + str(user[2]))
             )
             db.execute(f"""insert into logs (type, message) values ('info', 'User {msg.chat.id} made a distribution')""")
         except Exception as e:
             db.execute("""DELETE FROM users WHERE chat_id = %s""", user[0])
             db.execute(f"""insert into logs (type, message) values ('error', '{e}')""")
+
 
 @user_router.message(Command('update_users_data'))
 async def update_users_data(msg: Message, bot: Bot):
@@ -364,6 +369,43 @@ async def update_users_data(msg: Message, bot: Bot):
         await msg.answer("Ошибка❗\nТебе недоступна данная команда!")
         db.execute(
             f"""insert into logs (type, message) values ('warning', 'User {msg.chat.id} attempted to update the data of all users')""")
+
+
+# Предложка
+@user_router.message(F.text.lower()[:-2] == "предложить идею")
+async def suggestion_ideas(msg: Message, state: FSMContext):
+    await state.set_state(Suggestion.suggestion)
+    await msg.answer(
+        "Напиши свою идею. Если передумал, нажми 'Отменить ввод' или команду '/cancel'.",
+        reply_markup=main_keyboard.suggestion_idea_kb()
+    )
+
+
+@user_router.message(Suggestion.suggestion)
+async def set_message_cmd(msg: Message, state: FSMContext, bot: Bot):
+    await state.update_data(message=msg.text)
+    text = await state.get_data()
+    await state.clear()
+    user_class = db.fetch("""SELECT class FROM users WHERE chat_id = %s""", msg.chat.id)[0][0]
+    if text['message'].lower() in 'отменить ввод' or text['message'].lower() in '/cancel':
+        await msg.answer(
+            "Хорошо, но если будет предложение обязательно возвращайся.",
+            reply_markup=main_keyboard.main(URL + str(user_class))
+        )
+    else:
+        user_id = db.fetch("""SELECT id FROM users WHERE chat_id = %s""", msg.chat.id)[0][0]
+        idea_id = db.fetch(
+            """insert into ideas (user_id, idea) values (%s, %s) returning id""",
+            user_id, text['message']
+        )
+        db.execute(
+            f"""insert into logs (type, message) values ('info', %s)""",
+            f'User {msg.chat.id} suggested idea #{idea_id[0][0]}'
+        )
+        await msg.answer(
+            "Спасибо за твою идею! Мы её рассмотрим.",
+            reply_markup=main_keyboard.main(URL + str(user_class))
+        )
 
 
 @user_router.message()
