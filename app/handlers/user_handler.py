@@ -146,6 +146,7 @@ async def get_new_schedule(bot: Bot):
         for task_item, task in enumerate(tasks_finish):
             if task.status == 200:
                 schedule = await task.text()
+                print(schedule)
                 soup = BeautifulSoup(schedule, "html.parser")
 
                 i = 1
