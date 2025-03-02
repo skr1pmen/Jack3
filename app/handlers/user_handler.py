@@ -348,10 +348,10 @@ async def set_message_cmd(msg: Message, state: FSMContext, bot: Bot):
                 .replace("{bot}", hlink("Jack","https://t.me/srmk_bot?start=1")),
                 reply_markup=main_keyboard.main(URL + str(user[2]))
             )
-            db.execute(f"""insert into logs (type, message) values ('info', 'User {msg.chat.id} made a distribution')""")
         except Exception as e:
             db.execute("""DELETE FROM users WHERE chat_id = %s""", user[0])
             db.execute(f"""insert into logs (type, message) values ('error', '{e}')""")
+    db.execute(f"""insert into logs (type, message) values ('info', 'User {msg.chat.id} made a distribution')""")
 
 
 @user_router.message(Command('update_users_data'))
