@@ -25,7 +25,6 @@ async def main():
     )
 
     cron.start()
-    asyncio.create_task(user.connect_to_server(bot))
     await dp.start_polling(bot)
 
 
