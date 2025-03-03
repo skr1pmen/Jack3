@@ -246,7 +246,7 @@ async def schedule_converter(schedule):
 
 
 @user_router.message(F.text.lower() == "расписание 📅")
-async def get_schedule_cmd(msg: Message):
+async def get_schedule_cmd(msg: Message, state: FSMContext):
     user_class = db.fetch("""SELECT class FROM users WHERE chat_id = %s""", msg.chat.id)[0][0]
     try:
         class_schedule = db.fetch(
@@ -258,6 +258,10 @@ async def get_schedule_cmd(msg: Message):
             return
         await msg.answer(f"Расписание занятий на данный момент:\n\n{await schedule_converter(class_schedule)}")
     except Exception as e:
+        await msg.answer(
+            f"Прости, но у тебя не указана группа! Давай сделаем это сейчас.\n"
+            f"Введи, пожалуйста, название группы.\n<i>Пример: МК-22</i>")
+        await state.set_state(Group.group)
         print(e, f"\n{user_class}")
 
 
