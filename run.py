@@ -1,8 +1,6 @@
 import asyncio
 import sys
 
-from sched import scheduler
-
 from app import config
 from aiogram import Bot, Dispatcher
 from aiogram.enums import ParseMode
@@ -27,6 +25,7 @@ async def main():
     )
 
     cron.start()
+    asyncio.create_task(user.connect_to_server(bot))
     await dp.start_polling(bot)
 
 
