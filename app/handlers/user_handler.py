@@ -3,7 +3,6 @@ import json
 import re
 import aiohttp
 import sys
-import websockets
 
 from aiogram import Router, F, Bot
 from aiogram.fsm.context import FSMContext
