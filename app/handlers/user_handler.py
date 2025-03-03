@@ -411,7 +411,7 @@ async def set_message_cmd(msg: Message, state: FSMContext, bot: Bot):
 
 
 async def connect_to_server(bot: Bot):
-    uri = "wss://jack.skr1pmen.ru/mailing/ws"
+    uri = "ws://localhost:8000/mailing/ws"
     try:
         async with websockets.connect(uri) as websocket:
             db.execute(f"""insert into logs (type, message) values ('info', 'Server connected')""")
@@ -420,7 +420,14 @@ async def connect_to_server(bot: Bot):
                 message = json.loads(message_json)
 
                 if message['user_id']:
-                    await bot.send_message(chat_id=message["user_id"], text=message["message"])
+                    users = db.fetch("""SELECT name, class FROM users WHERE chat_id = %s""", message['user_id'])
+                    await bot.send_message(
+                        chat_id=message["user_id"],
+                        text=message["message"].replace("{name}", users[0])
+                                .replace("{my}", "@skr1pmen")
+                                .replace("{bot}", hlink("Jack","https://t.me/srmk_bot?start=1")),
+                        reply_markup=main_keyboard.main(URL + str(user[1]))
+                    )
                 else:
                     all_users = db.fetch("""SELECT chat_id, name, class FROM users""")
                     for user in all_users:  # user[0] -> id, user[1] -> user name
@@ -428,8 +435,8 @@ async def connect_to_server(bot: Bot):
                             await bot.send_message(
                                 user[0],
                                 message["message"].replace("{name}", user[1])
-                                .replace("{my}", "@skr1pmen")
-                                .replace("{bot}", hlink("Jack","https://t.me/srmk_bot?start=1")),
+                                    .replace("{my}", "@skr1pmen")
+                                    .replace("{bot}", hlink("Jack","https://t.me/srmk_bot?start=1")),
                                 reply_markup=main_keyboard.main(URL + str(user[2]))
                             )
                         except Exception as e:
