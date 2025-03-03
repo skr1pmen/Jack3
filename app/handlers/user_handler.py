@@ -3,6 +3,7 @@ import json
 import re
 import aiohttp
 import sys
+import websockets
 
 from aiogram import Router, F, Bot
 from aiogram.fsm.context import FSMContext
@@ -409,35 +410,36 @@ async def set_message_cmd(msg: Message, state: FSMContext, bot: Bot):
         )
 
 
-# async def connect_to_server(bot: Bot):
-#     uri = "wss://jack.skr1pmen.ru/mailing/ws"
-#     try:
-#         async with websockets.connect(uri) as websocket:
-#             while True:
-#                 message_json = await websocket.recv()
-#                 message = json.loads(message_json)
-#
-#                 if message['user_id']:
-#                     await bot.send_message(chat_id=message["user_id"], text=message["message"])
-#                 else:
-#                     all_users = db.fetch("""SELECT chat_id, name, class FROM users""")
-#                     for user in all_users:  # user[0] -> id, user[1] -> user name
-#                         try:
-#                             await bot.send_message(
-#                                 user[0],
-#                                 message["message"].replace("{name}", user[1])
-#                                 .replace("{my}", "@skr1pmen")
-#                                 .replace("{bot}", hlink("Jack","https://t.me/srmk_bot?start=1")),
-#                                 reply_markup=main_keyboard.main(URL + str(user[2]))
-#                             )
-#                         except Exception as e:
-#                             db.execute("""DELETE FROM users WHERE chat_id = %s""", user[0])
-#                             db.execute("""UPDATE statistics SET delete = delete + 1""")
-#                             db.execute(f"""insert into logs (type, message) values ('error', '{e}')""")
-#                     db.execute(f"""insert into logs (type, message) values ('info', 'The mailing from the site has started')""")
-#
-#     except Exception as e:
-#         print(e)
+async def connect_to_server(bot: Bot):
+    uri = "wss://jack.skr1pmen.ru/mailing/ws"
+    try:
+        async with websockets.connect(uri) as websocket:
+            db.execute(f"""insert into logs (type, message) values ('info', 'Server connected')""")
+            while True:
+                message_json = await websocket.recv()
+                message = json.loads(message_json)
+
+                if message['user_id']:
+                    await bot.send_message(chat_id=message["user_id"], text=message["message"])
+                else:
+                    all_users = db.fetch("""SELECT chat_id, name, class FROM users""")
+                    for user in all_users:  # user[0] -> id, user[1] -> user name
+                        try:
+                            await bot.send_message(
+                                user[0],
+                                message["message"].replace("{name}", user[1])
+                                .replace("{my}", "@skr1pmen")
+                                .replace("{bot}", hlink("Jack","https://t.me/srmk_bot?start=1")),
+                                reply_markup=main_keyboard.main(URL + str(user[2]))
+                            )
+                        except Exception as e:
+                            db.execute("""DELETE FROM users WHERE chat_id = %s""", user[0])
+                            db.execute("""UPDATE statistics SET delete = delete + 1""")
+                            db.execute(f"""insert into logs (type, message) values ('error', '{e}')""")
+                    db.execute(f"""insert into logs (type, message) values ('info', 'The mailing from the site has started')""")
+
+    except Exception as e:
+        print(e)
 
 @user_router.message()
 async def user_cmd(msg: Message):
