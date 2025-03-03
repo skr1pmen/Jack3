@@ -415,7 +415,7 @@ async def set_message_cmd(msg: Message, state: FSMContext, bot: Bot):
 
 
 async def connect_to_server(bot: Bot):
-    uri = "ws://localhost:8000/mailing/ws"
+    uri = "wss://jack.skr1pmen.ru/mailing/ws"
     try:
         async with websockets.connect(uri) as websocket:
             db.execute(f"""insert into logs (type, message) values ('info', 'Server connected')""")
