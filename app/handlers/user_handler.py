@@ -165,7 +165,7 @@ async def get_new_schedule(bot: Bot):
 
                     if i <= 7:
                         if finish.strip() == "":
-                            SCHEDULE['today'][i] = "Нет пары."
+                            SCHEDULE['today'][i] = "Нет пары"
                         else:
                             SCHEDULE['today'][i] = finish.strip()
                     else:
