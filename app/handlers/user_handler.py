@@ -218,7 +218,7 @@ async def get_new_schedule(bot: Bot):
                 raise Exception(f"Сайт не дал ответ для группы {task.url}")
     except Exception as e:
         print(e)
-        db.execute(f"""insert into logs (type, message) values ('error', '{e}')""")
+        db.execute("""insert into logs (type, message) values ('error', %s)""", e)
     finally:
         await aiohttp_client.close()
 
