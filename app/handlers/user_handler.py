@@ -472,95 +472,95 @@ async def connect_to_server(bot: Bot):
 
 
 # Добавление/Удаление дополнительных групп для пользователя
-# @user_router.message(F.text.lower()[:-2] == "дополнительные группы")
-# async def additional_classes_settings(msg: Message):
-#     groups_data = db.fetch("""select additional_classes from users where chat_id = %s""", msg.chat.id)[0][0]
-#
-#     groups = 'Не указано'
-#     if groups_data:
-#         group_names = [(await get_group_name_by_class_code(group)).upper() for group in groups_data]
-#         groups = ', '.join(group_names) if group_names else 'Не указано'
-#
-#     await msg.answer(f"Твои дополнительные группы:\n{groups}", reply_markup=additional_classes_kb.main())
-#
-# @user_router.callback_query(F.data == "add_group")
-# async def add_group_btn(call: CallbackQuery, state: FSMContext):
-#     await call.answer('')
-#
-#     await state.set_state(AddGroup.additional_group)
-#
-#     await call.message.edit_text(
-#         f"Хорошо, напиши мне, пожалуйста, название группы, которую ты дополнительно хочешь отслеживать.\n<i>Например: мк-22</i>",
-#         reply_markup=None
-#     )
-#
-# @user_router.message(AddGroup.additional_group)
-# async def additional_group(msg: Message, state: FSMContext):
-#     groups = db.fetch("""select class, additional_classes from users where chat_id = %s""", msg.chat.id)[0]
-#
-#     await state.update_data(additional_group=msg.text)
-#     data = await state.get_data()
-#     await state.clear()
-#
-#     main_group = groups[0]
-#     additional_group = [] if not groups[1] else groups[1]
-#
-#     if data['additional_group'].lower() in group_list:
-#         code = group_list[data['additional_group'].lower()]
-#         if code == main_group or code in additional_group:
-#             await msg.answer("Эта группа уже отслеживается. Попробуй ещё раз ввести название группы.")
-#             await state.set_state(AddGroup.additional_group)
-#         else:
-#             additional_group.append(code)
-#             db.execute(
-#                 """update users set additional_classes = %s where chat_id = %s""",
-#                 additional_group, msg.chat.id
-#             )
-#             await msg.answer(
-#                 "Хорошо, теперь ты будешь дополнительно получать расписание этой группы.",
-#                 reply_markup=main_keyboard.main(f"{URL}{main_group}"))
-#     else:
-#         await msg.answer("Прости, но я не знаю такую группу. Попробуй ввести ещё раз!")
-#         await state.set_state(AddGroup.additional_group)
-#
-# @user_router.callback_query(F.data == "del_group")
-# async def del_group_btn(call: CallbackQuery):
-#     groups = db.fetch("""select additional_classes from users where chat_id = %s""", call.message.chat.id)[0][0]
-#
-#     await call.answer('')
-#     if not groups:
-#         await call.message.edit_text("У вас нет групп для отслеживания.")
-#         return
-#     groups_dict = {}
-#     for group in groups:
-#         groups_dict[await get_group_name_by_class_code(group)] = group
-#     await call.message.edit_text(
-#         "Выбери группу, которую нужно перестать отслеживать.",
-#             reply_markup=additional_classes_kb.del_group(groups_dict)
-#     )
-#
-# @user_router.callback_query()
-# async def add_group_btn(call: CallbackQuery):
-#     groups = db.fetch("""select additional_classes from users where chat_id = %s""", call.message.chat.id)[0][0]
-#
-#     await call.answer('')
-#     if 'delete_' in call.data:
-#         code = call.data[7:]
-#         groups.remove(int(code))
-#         db.execute(
-#             """update users set additional_classes = %s where chat_id = %s""",
-#             groups, call.message.chat.id
-#         )
-#         if len(groups) >= 1:
-#             groups_dict = {}
-#             for group in groups:
-#                 groups_dict[await get_group_name_by_class_code(group)] = group
-#             await call.message.edit_text(
-#                 "Выбери группу, которую нужно перестать отслеживать.",
-#                 reply_markup=additional_classes_kb.del_group(groups_dict)
-#             )
-#         else:
-#             await call.message.edit_text("У вас больше нет групп для отслеживания.")
+@user_router.message(F.text.lower()[:-2] == "дополнительные группы")
+async def additional_classes_settings(msg: Message):
+    groups_data = db.fetch("""select additional_classes from users where chat_id = %s""", msg.chat.id)[0][0]
+
+    groups = 'Не указано'
+    if groups_data:
+        group_names = [(await get_group_name_by_class_code(group)).upper() for group in groups_data]
+        groups = ', '.join(group_names) if group_names else 'Не указано'
+
+    await msg.answer(f"Твои дополнительные группы:\n{groups}", reply_markup=additional_classes_kb.main())
+
+@user_router.callback_query(F.data == "add_group")
+async def add_group_btn(call: CallbackQuery, state: FSMContext):
+    await call.answer('')
+
+    await state.set_state(AddGroup.additional_group)
+
+    await call.message.edit_text(
+        f"Хорошо, напиши мне, пожалуйста, название группы, которую ты дополнительно хочешь отслеживать.\n<i>Например: мк-22</i>",
+        reply_markup=None
+    )
+
+@user_router.message(AddGroup.additional_group)
+async def additional_group(msg: Message, state: FSMContext):
+    groups = db.fetch("""select class, additional_classes from users where chat_id = %s""", msg.chat.id)[0]
+
+    await state.update_data(additional_group=msg.text)
+    data = await state.get_data()
+    await state.clear()
+
+    main_group = groups[0]
+    additional_group = [] if not groups[1] else groups[1]
+
+    if data['additional_group'].lower() in group_list:
+        code = group_list[data['additional_group'].lower()]
+        if code == main_group or code in additional_group:
+            await msg.answer("Эта группа уже отслеживается. Попробуй ещё раз ввести название группы.")
+            await state.set_state(AddGroup.additional_group)
+        else:
+            additional_group.append(code)
+            db.execute(
+                """update users set additional_classes = %s where chat_id = %s""",
+                additional_group, msg.chat.id
+            )
+            await msg.answer(
+                "Хорошо, теперь ты будешь дополнительно получать расписание этой группы.",
+                reply_markup=main_keyboard.main(f"{URL}{main_group}"))
+    else:
+        await msg.answer("Прости, но я не знаю такую группу. Попробуй ввести ещё раз!")
+        await state.set_state(AddGroup.additional_group)
+
+@user_router.callback_query(F.data == "del_group")
+async def del_group_btn(call: CallbackQuery):
+    groups = db.fetch("""select additional_classes from users where chat_id = %s""", call.message.chat.id)[0][0]
+
+    await call.answer('')
+    if not groups:
+        await call.message.edit_text("У вас нет групп для отслеживания.")
+        return
+    groups_dict = {}
+    for group in groups:
+        groups_dict[await get_group_name_by_class_code(group)] = group
+    await call.message.edit_text(
+        "Выбери группу, которую нужно перестать отслеживать.",
+            reply_markup=additional_classes_kb.del_group(groups_dict)
+    )
+
+@user_router.callback_query()
+async def add_group_btn(call: CallbackQuery):
+    groups = db.fetch("""select additional_classes from users where chat_id = %s""", call.message.chat.id)[0][0]
+
+    await call.answer('')
+    if 'delete_' in call.data:
+        code = call.data[7:]
+        groups.remove(int(code))
+        db.execute(
+            """update users set additional_classes = %s where chat_id = %s""",
+            groups, call.message.chat.id
+        )
+        if len(groups) >= 1:
+            groups_dict = {}
+            for group in groups:
+                groups_dict[await get_group_name_by_class_code(group)] = group
+            await call.message.edit_text(
+                "Выбери группу, которую нужно перестать отслеживать.",
+                reply_markup=additional_classes_kb.del_group(groups_dict)
+            )
+        else:
+            await call.message.edit_text("У вас больше нет групп для отслеживания.")
 
 
 @user_router.message()
