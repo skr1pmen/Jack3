@@ -25,7 +25,7 @@ from app.utils.utils import *
 user_router = Router()
 db = Database(DATABASE['HOST'], DATABASE['USERNAME'], DATABASE['PASSWORD'], DATABASE['BASENAME'])
 
-# db.execute("""insert into logs (type, message) values ('info', %s)""", "Bot started (tested)" if '--test-start' in sys.argv else "Bot started")
+db.execute("""insert into logs (type, message) values ('info', %s)""", "Bot started (tested)" if '--test-start' in sys.argv else "Bot started")
 
 @user_router.message(CommandStart())
 async def start_cmd(msg: Message, state: FSMContext):
