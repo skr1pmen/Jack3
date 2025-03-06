@@ -438,7 +438,7 @@ async def set_message_cmd(msg: Message, state: FSMContext, bot: Bot):
 
 # Подключение к серверу
 async def connect_to_server(bot: Bot):
-    async with websockets.connect(config.WS_SERVER) as websocket:
+    async with websockets.connect("wss://jack.skr1pmen.ry/mailing/ws") as websocket:
         db.execute(f"""insert into logs (type, message) values ('info', 'Server connected')""")
         while True:
             message_json = await websocket.recv()
