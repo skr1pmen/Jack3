@@ -1,5 +1,6 @@
 import asyncio
 import sys
+from app.utils.utils import *
 
 from app import config
 from aiogram import Bot, Dispatcher
@@ -14,7 +15,6 @@ async def main():
         token=config.TOKEN_TEST if "--test-start" in sys.argv else config.TOKEN,
         default=DefaultBotProperties(parse_mode=ParseMode.HTML)
     )
-    # bot = Bot(token=config.TOKEN_TEST, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     dp = Dispatcher()
     cron = AsyncIOScheduler(timezone='Europe/Moscow')
     cron.add_job(func=user.get_new_schedule, trigger='cron', minute="*/15", args=[bot])
@@ -25,7 +25,7 @@ async def main():
     )
 
     cron.start()
-    asyncio.create_task(user.connect_to_server(bot))
+    asyncio.create_task(connect_with_retry(user, bot))
     await dp.start_polling(bot)
 
 

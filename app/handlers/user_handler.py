@@ -7,23 +7,25 @@ import websockets
 
 from aiogram import Router, F, Bot
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message
+from aiogram.types import Message, CallbackQuery
 from aiogram.filters import CommandStart, Command
 from bs4 import BeautifulSoup
 from app.database.base_model import Database
 from app.config import DATABASE, URL, SCHEDULE, USERAGENT, ADMINS
-from app.utils.group import Group
+from app.utils.group import Group, AddGroup
 from app.utils.suggestion import Suggestion
 from app.utils.message import Message as message_text
 from app.groups import group as group_list
-from app.keyboards import main_keyboard, settings_keyboard, not_group_keyboard
+from app.keyboards import main_keyboard, settings_keyboard, not_group_keyboard, additional_classes_kb
 from aiogram.utils.markdown import hlink
 from datetime import datetime
+from app import config
+from app.utils.utils import *
 
 user_router = Router()
 db = Database(DATABASE['HOST'], DATABASE['USERNAME'], DATABASE['PASSWORD'], DATABASE['BASENAME'])
 
-db.execute("""insert into logs (type, message) values ('info', %s)""", "Bot started (tested)" if '--test-start' in sys.argv else "Bot started")
+# db.execute("""insert into logs (type, message) values ('info', %s)""", "Bot started (tested)" if '--test-start' in sys.argv else "Bot started")
 
 @user_router.message(CommandStart())
 async def start_cmd(msg: Message, state: FSMContext):
@@ -199,7 +201,7 @@ async def get_new_schedule(bot: Bot):
 
                     db.execute("""UPDATE schedules SET schedule = %s WHERE class = %s""", schedule_json,
                                codes[task_item])
-                    chats_id = db.fetch("""SELECT chat_id FROM users WHERE class = %s""", codes[task_item])
+                    chats_id = db.fetch("""SELECT chat_id FROM users WHERE class = %s OR %s = ANY(additional_classes)""", codes[task_item], codes[task_item])
                     if chats_id is not None:
                         for chat_id in chats_id:
                             schedule = json.loads(schedule_json)
@@ -247,7 +249,7 @@ async def schedule_converter(schedule):
 
 @user_router.message(F.text.lower() == "расписание 📅")
 async def get_schedule_cmd(msg: Message, state: FSMContext):
-    user_class = db.fetch("""SELECT class FROM users WHERE chat_id = %s""", msg.chat.id)[0][0]
+    user_class = db.fetch("""SELECT class, additional_classes FROM users WHERE chat_id = %s""", msg.chat.id)[0]
 
     async def error_def():
         await msg.answer(
@@ -256,21 +258,34 @@ async def get_schedule_cmd(msg: Message, state: FSMContext):
         await state.set_state(Group.group)
 
     try:
-        if user_class != 0:
+        if user_class[0] != 0:
             class_schedule = db.fetch(
                 """SELECT schedule FROM schedules WHERE class = %s""",
-                user_class
+                user_class[0]
             )[0][0]
             if not class_schedule:
                 await msg.answer(f"Расписание пока недоступно!")
                 return
-            await msg.answer(f"Расписание занятий на данный момент:\n\n{await schedule_converter(class_schedule)}")
-        else: await error_def()
+            await msg.answer(f"Расписание занятий для группы <b>{(await get_group_name_by_class_code(user_class[0])).upper()}</b>:\n\n{await schedule_converter(class_schedule)}")
+        else:
+            await error_def()
+            return
+
+        if user_class[1]:
+            for group in user_class[1]:
+                class_schedule = db.fetch(
+                    """SELECT schedule FROM schedules WHERE class = %s""",
+                    group
+                )[0][0]
+                if not class_schedule:
+                    await msg.answer(f"Расписание пока недоступно!")
+                    return
+                await msg.answer(
+                    f"Расписание занятий для группы <b>{(await get_group_name_by_class_code(group)).upper()}</b>:\n\n{await schedule_converter(class_schedule)}")
 
     except Exception as e:
-        await error_def()
-        print(e, f"\n{user_class}")
-
+        # await error_def()
+        print(e, f"\n{user_class[0]}")
 
 
 @user_router.message(F.text.lower() == "звонки 🔔")
@@ -313,7 +328,7 @@ async def back_cmd(msg: Message):
     await msg.answer("Возвращаю в меню", reply_markup=main_keyboard.main(URL + str(user_class)))
 
 
-@user_router.message(F.text.lower() == "изменить группу 📔")
+@user_router.message(F.text.lower() == "изменить основную группу 📔")
 async def edit_group_cmd(msg: Message, state: FSMContext):
     db.execute("""UPDATE users SET class = 0 WHERE chat_id = %s""", msg.chat.id)
     await state.set_state(Group.group)
@@ -394,7 +409,6 @@ async def suggestion_ideas(msg: Message, state: FSMContext):
         reply_markup=main_keyboard.suggestion_idea_kb()
     )
 
-
 @user_router.message(Suggestion.suggestion)
 async def set_message_cmd(msg: Message, state: FSMContext, bot: Bot):
     await state.update_data(message=msg.text)
@@ -422,43 +436,132 @@ async def set_message_cmd(msg: Message, state: FSMContext, bot: Bot):
         )
 
 
+# Подключение к серверу
 async def connect_to_server(bot: Bot):
-    uri = "wss://jack.skr1pmen.ru/mailing/ws"
-    try:
-        async with websockets.connect(uri) as websocket:
-            db.execute(f"""insert into logs (type, message) values ('info', 'Server connected')""")
-            while True:
-                message_json = await websocket.recv()
-                message = json.loads(message_json)
+    async with websockets.connect(config.WS_SERVER_TEST if '--test-start' in sys.argv else config.WS_SERVER) as websocket:
+        db.execute(f"""insert into logs (type, message) values ('info', 'Server connected')""")
+        while True:
+            message_json = await websocket.recv()
+            message = json.loads(message_json)
 
-                if message['user_id']:
-                    users = db.fetch("""SELECT name, class FROM users WHERE chat_id = %s""", message['user_id'])
-                    await bot.send_message(
-                        chat_id=message["user_id"],
-                        text=message["message"].replace("{name}", users[0])
+            if message['user_id']:
+                users = db.fetch("""SELECT name, class FROM users WHERE chat_id = %s""", message['user_id'])
+                await bot.send_message(
+                    chat_id=message["user_id"],
+                    text=message["message"].replace("{name}", users[0])
+                            .replace("{my}", "@skr1pmen")
+                            .replace("{bot}", hlink("Jack","https://t.me/srmk_bot?start=1")),
+                    reply_markup=main_keyboard.main(URL + str(user[1]))
+                )
+            else:
+                all_users = db.fetch("""SELECT chat_id, name, class FROM users""")
+                for user in all_users:  # user[0] -> id, user[1] -> user name
+                    try:
+                        await bot.send_message(
+                            user[0],
+                            message["message"].replace("{name}", user[1])
                                 .replace("{my}", "@skr1pmen")
                                 .replace("{bot}", hlink("Jack","https://t.me/srmk_bot?start=1")),
-                        reply_markup=main_keyboard.main(URL + str(user[1]))
-                    )
-                else:
-                    all_users = db.fetch("""SELECT chat_id, name, class FROM users""")
-                    for user in all_users:  # user[0] -> id, user[1] -> user name
-                        try:
-                            await bot.send_message(
-                                user[0],
-                                message["message"].replace("{name}", user[1])
-                                    .replace("{my}", "@skr1pmen")
-                                    .replace("{bot}", hlink("Jack","https://t.me/srmk_bot?start=1")),
-                                reply_markup=main_keyboard.main(URL + str(user[2]))
-                            )
-                        except Exception as e:
-                            db.execute("""DELETE FROM users WHERE chat_id = %s""", user[0])
-                            db.execute("""UPDATE statistics SET delete = delete + 1""")
-                            db.execute(f"""insert into logs (type, message) values ('error', '{e}')""")
-                    db.execute(f"""insert into logs (type, message) values ('info', 'The mailing from the site has started')""")
+                            reply_markup=main_keyboard.main(URL + str(user[2]))
+                        )
+                    except Exception as e:
+                        db.execute("""DELETE FROM users WHERE chat_id = %s""", user[0])
+                        db.execute("""UPDATE statistics SET delete = delete + 1""")
+                        db.execute(f"""insert into logs (type, message) values ('error', '{e}')""")
+                db.execute(f"""insert into logs (type, message) values ('info', 'The mailing from the site has started')""")
 
-    except Exception as e:
-        print(e)
+
+# Добавление/Удаление дополнительных групп для пользователя
+# @user_router.message(F.text.lower()[:-2] == "дополнительные группы")
+# async def additional_classes_settings(msg: Message):
+#     groups_data = db.fetch("""select additional_classes from users where chat_id = %s""", msg.chat.id)[0][0]
+#
+#     groups = 'Не указано'
+#     if groups_data:
+#         group_names = [(await get_group_name_by_class_code(group)).upper() for group in groups_data]
+#         groups = ', '.join(group_names) if group_names else 'Не указано'
+#
+#     await msg.answer(f"Твои дополнительные группы:\n{groups}", reply_markup=additional_classes_kb.main())
+#
+# @user_router.callback_query(F.data == "add_group")
+# async def add_group_btn(call: CallbackQuery, state: FSMContext):
+#     await call.answer('')
+#
+#     await state.set_state(AddGroup.additional_group)
+#
+#     await call.message.edit_text(
+#         f"Хорошо, напиши мне, пожалуйста, название группы, которую ты дополнительно хочешь отслеживать.\n<i>Например: мк-22</i>",
+#         reply_markup=None
+#     )
+#
+# @user_router.message(AddGroup.additional_group)
+# async def additional_group(msg: Message, state: FSMContext):
+#     groups = db.fetch("""select class, additional_classes from users where chat_id = %s""", msg.chat.id)[0]
+#
+#     await state.update_data(additional_group=msg.text)
+#     data = await state.get_data()
+#     await state.clear()
+#
+#     main_group = groups[0]
+#     additional_group = [] if not groups[1] else groups[1]
+#
+#     if data['additional_group'].lower() in group_list:
+#         code = group_list[data['additional_group'].lower()]
+#         if code == main_group or code in additional_group:
+#             await msg.answer("Эта группа уже отслеживается. Попробуй ещё раз ввести название группы.")
+#             await state.set_state(AddGroup.additional_group)
+#         else:
+#             additional_group.append(code)
+#             db.execute(
+#                 """update users set additional_classes = %s where chat_id = %s""",
+#                 additional_group, msg.chat.id
+#             )
+#             await msg.answer(
+#                 "Хорошо, теперь ты будешь дополнительно получать расписание этой группы.",
+#                 reply_markup=main_keyboard.main(f"{URL}{main_group}"))
+#     else:
+#         await msg.answer("Прости, но я не знаю такую группу. Попробуй ввести ещё раз!")
+#         await state.set_state(AddGroup.additional_group)
+#
+# @user_router.callback_query(F.data == "del_group")
+# async def del_group_btn(call: CallbackQuery):
+#     groups = db.fetch("""select additional_classes from users where chat_id = %s""", call.message.chat.id)[0][0]
+#
+#     await call.answer('')
+#     if not groups:
+#         await call.message.edit_text("У вас нет групп для отслеживания.")
+#         return
+#     groups_dict = {}
+#     for group in groups:
+#         groups_dict[await get_group_name_by_class_code(group)] = group
+#     await call.message.edit_text(
+#         "Выбери группу, которую нужно перестать отслеживать.",
+#             reply_markup=additional_classes_kb.del_group(groups_dict)
+#     )
+#
+# @user_router.callback_query()
+# async def add_group_btn(call: CallbackQuery):
+#     groups = db.fetch("""select additional_classes from users where chat_id = %s""", call.message.chat.id)[0][0]
+#
+#     await call.answer('')
+#     if 'delete_' in call.data:
+#         code = call.data[7:]
+#         groups.remove(int(code))
+#         db.execute(
+#             """update users set additional_classes = %s where chat_id = %s""",
+#             groups, call.message.chat.id
+#         )
+#         if len(groups) >= 1:
+#             groups_dict = {}
+#             for group in groups:
+#                 groups_dict[await get_group_name_by_class_code(group)] = group
+#             await call.message.edit_text(
+#                 "Выбери группу, которую нужно перестать отслеживать.",
+#                 reply_markup=additional_classes_kb.del_group(groups_dict)
+#             )
+#         else:
+#             await call.message.edit_text("У вас больше нет групп для отслеживания.")
+
 
 @user_router.message()
 async def user_cmd(msg: Message):
