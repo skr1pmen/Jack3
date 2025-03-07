@@ -521,6 +521,7 @@ async def additional_group(msg: Message, state: FSMContext):
             await msg.answer(
                 "Хорошо, теперь ты будешь дополнительно получать расписание этой группы.",
                 reply_markup=main_keyboard.main(f"{URL}{main_group}"))
+            db.execute(f"""insert into logs (type, message) values ('info', 'User {msg.chat.id} began to additionally track the group •{code}')""")
     else:
         await msg.answer("Прости, но я не знаю такую группу. Попробуй ввести ещё раз!")
         await state.set_state(AddGroup.additional_group)
@@ -561,6 +562,7 @@ async def add_group_btn(call: CallbackQuery):
                 "Выбери группу, которую нужно перестать отслеживать.",
                 reply_markup=additional_classes_kb.del_group(groups_dict)
             )
+            db.execute(f"""insert into logs (type, message) values ('info', 'User {call.message.chat.id} stopped tracking the additional group •{code}')""")
         else:
             await call.message.edit_text("У вас больше нет групп для отслеживания.")
 
