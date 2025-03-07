@@ -43,9 +43,9 @@ def user_settings():
             [
                 KeyboardButton(text="Изменить группу 📔")
             ],
-            # [
-            #     KeyboardButton(text="Дополнительные группы 👥")
-            # ],
+            [
+                KeyboardButton(text="Дополнительные группы 👥")
+            ],
             [
                 KeyboardButton(text="Назад ◀")
             ],
