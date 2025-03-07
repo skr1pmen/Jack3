@@ -209,7 +209,7 @@ async def get_new_schedule(bot: Bot):
                             try:
                                 await bot.send_message(
                                     int(chat_id[0]),
-                                    f"На сайте обновили расписание:\n\n{message}",
+                                    f"На сайте обновили расписание для группы <b>{(await get_group_name_by_class_code(codes[task_item])).upper()}</b>:\n\n{message}",
                                     reply_markup=main_keyboard.main(URL + str(codes[task_item])))
                             except Exception as e:
                                 db.execute("""DELETE FROM users WHERE chat_id = %s""", int(chat_id[0]))
