@@ -121,8 +121,8 @@ async def get_statistics(bot: Bot):
     db.execute("""UPDATE statistics SET added = 0, delete = 0""")
     db.execute(
         """INSERT INTO statistics_history (week, year, added, deleted) VALUES (%s, %s, %s, %s)""",
-        datetime.now().isocalendar().week - 1,
-        datetime.now().isocalendar().year,
+        datetime.today().isocalendar().week - 1,
+        datetime.today().isocalendar().year,
         statistics[0],
         statistics[1]
     )
@@ -309,14 +309,14 @@ async def get_help_cmd(msg: Message):
 @user_router.message(F.text.lower() == "настройки ⚙")
 async def get_settings_cmd(msg: Message):
     if msg.chat.id in ADMINS:
-        if db.fetch("""SELECT mailing FROM bot_settings""")[0][0]:
-            await msg.answer(f"Доступные настройки:",
-                             reply_markup=settings_keyboard.settings(
-                                 url=f"https://jack.skr1pmen.ru/login?id={msg.chat.id}"))
-        else:
-            await msg.answer(f"Доступные настройки:",
-                             reply_markup=settings_keyboard.settings(
-                                 mailing=False, url=f"https://jack.skr1pmen.ru/login?id={msg.chat.id}"))
+        is_mailing = db.fetch("""SELECT mailing FROM bot_settings""")[0][0]
+        await msg.answer(
+            f"Доступные настройки:",
+            reply_markup=settings_keyboard.settings(
+                mailing=is_mailing,
+                url=f"https://jack.skr1pmen.ru/login?id={msg.chat.id}"
+            )
+        )
     else:
         await msg.answer(f"Доступные настройки:",
                          reply_markup=settings_keyboard.user_settings())
